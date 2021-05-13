@@ -1,94 +1,132 @@
-#from flask import Flask, render_template, request
-#import jsonify
-#import requests
-#import pickle
-#import numpy as np
-
 from flask import Flask, render_template, request
 import numpy as np
 import pandas as pd
 import flasgger
 from flasgger import Swagger
 import pickle
-from pickle import load
-import sklearn
-from sklearn.preprocessing import StandardScaler
+#from pickle import load
+#import sklearn
+#from sklearn.preprocessing import StandardScaler
 
+
+#initialize flask and swagger
 app = Flask(__name__)
 Swagger(app)
 
-loaded_model = load(open('random_forest_regression_model.pkl', 'rb'))
-#classifier=pickle.load(loaded_model)
 
+#load pickle file
+pickle_file_open = (open("random_forest_regression_model.pkl", "rb"))
+rf_random=pickle.load(pickle_file_open)
 
-
-@app.route('/',methods=["Get"])
-def predict():
-
-    """Car Price Prediction
-    Note: Only for houses with Latitude Ranging from: 24.93 - 24.97 , Longitude: 121.47 - 121.54
-    ---
+# Creating the Base Route
+@app.route('/', methods=['GET'])
+def welcome_message() :
+    try :
+        return "Welcome to Praxis",200
+    except Exception as e :
+        return "something went wrong",400
+    
+    
+#Creating route for prediction
+@app.route('/predict', methods=['GET'])
+def predict() :
+    
+    """Testing of prediction using test file
+    -------------------
     parameters:
-        - name: Year of Purchase
-          in: query
-          type: number
-          description: "0 - 43"
-          required: true
-        - name: Present Price
-          in: query
-          type: number
-          description: "24 - 4k"
-          required: true
-        - name: KMs Driven
-          in: query
-          type: number
-          description: "0-10"
-          required: true
-        - name: Owner
-          in: query
-          type: string
-          description: "24.93-25"
-          required: true
-        - name: Fuel Type
-          in: query
-          type: string
-          description: "121.47 - 121.57"
-          required: true
-        - name: Seller Type
-          in: query
-          type: string
-          description: "121.47 - 121.57"
-          required: true
-    responses:
-          200:
-              description: The output values
+        - name : Present_Price
+          in : query
+          type : number
+          description : Enter price in number
+          required : true 
+        - name : Kms_Driven
+          in : query
+          type : number
+          description : Enter KMs in number
+          required : true 
+        - name : Owner
+          in : query
+          type : string
+          description : Enter no. of previous owners (0, 1 or 3)
+          required : true 
+        - name : no_year
+          in : query
+          type : number
+          description : Enter total no. of years car is used (current yr is 2020)
+          required : true 
+        - name : Fuel_Type_Diesel
+          in : query
+          type : number
+          description : Enter 1 if diesel else enter 0
+          required : true 
+        - name : Fuel_Type_Petrol
+          in : query
+          type : number
+          description : Enter 1 if petrol else enter 0
+          required : true 
+        - name : Seller_Type_Individual
+          in : query
+          type : string
+          description : Enter 1 if individual else enter 0
+          required : true 
+        - name : Transmission_Manual
+          in : query
+          type : string
+          description : Enter 1 if manual else enter 0 if automatic
+          required : true 
+          
+        
+    responses :
+          200 :
+            description : The response of file api 
     """
-    l=[]
-    i1=request.args.get('Year of Purchase')
-    l.append(i1)
-    i2=request.args.get('Present Price')
-    l.append(i2)
-    i3=request.args.get('KMs Driven')
-    l.append(i3)
-    i4=request.args.get('Owner')
-    l.append(i4)
-    i5=request.args.get('Fuel Type')
-    l.append(i5)
-    i6=request.args.get('Seller Type')
-    l.append(i6)
-    #arr = np.array([l])
-    #arr = poly.transform(arr)
-    #scaled_arr = sc.transform(arr)
-    #p = round(loaded_model.predict(scaled_arr)[0][0],2)
-    return "Price of the car : "
+    
+    						
+    present_price = request.args.get("Present_Price")
+    kms_driven = request.args.get("Kms_Driven")
+    owner = request.args.get("Owner")
+    no_year = request.args.get("no_year")
+    fuel_type_diesel = request.args.get("Fuel_Type_Diesel")
+    fuel_type_petrol = request.args.get("Fuel_Type_Petrol")
+    seller_type_individual = request.args.get("Seller_Type_Individual")
+    transmission_manual = request.args.get("Transmission_Manual")
+    result = (rf_random.predict([[present_price,kms_driven,owner,no_year,
+                                  fuel_type_diesel,fuel_type_petrol,
+                                  seller_type_individual,transmission_manual]]))
+    if result in [0,"0"] :  return "Invalid Car Data",200
+    return "Valid Car Data",200
+    
+    
+    #return result
+
+
+
+@app.route('/predict_through_file',methods=['POST'])
+def predict_file():
+    """Testing of prediction using test file
+    -------------------
+    parameters :
+        - name : file
+          in : formData
+          type : file
+          required : true 
+        
+    responses :
+          200 :
+            description : The response of file is 
+    """
+    
+    df = pd.read_csv(request.files.get("file"))
+    print("-"*30+" File details "+"-"*30)
+    print(df.shape)
+    print(df.head())
+    print("-"*70)
+    result = rf_random.predict(df)
+    return f"The result are as follows {result}"
+    
 
 
 
 
-
-
-
-
-
-if __name__=='__main__':
-    app.run()
+if __name__ == "__main__":
+    app.run(debug = True)
